@@ -87,6 +87,38 @@ Alternately these have been listed in the file "requirements.txt," so this comma
 $ python3 -m pip install -r requirements.txt
 ```
 
+## Testing
+
+Use "pytest" to run the test suite:
+
+```
+$ pytest -xv test.py
+```
+
+Alternately there is a "Makefile" that contains this as the "test" target, so this is equivalent (if you have "make" installed):
+
+```
+$ make test
+```
+
+Cf https://github.com/kyclark/make-tutorial
+
+You should see output like so:
+
+```
+$ make test
+pytest -xv test.py
+============================= test session starts ==============================
+...
+collected 3 items
+
+test.py::test_exists PASSED                                              [ 33%]
+test.py::test_usage PASSED                                               [ 66%]
+test.py::test_ok PASSED                                                  [100%]
+
+============================== 3 passed in 1.24s ===============================
+```
+
 ## Author
 
 Ken Youens-Clark <kyclark@gmail.com>

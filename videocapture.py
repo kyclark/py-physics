@@ -6,6 +6,7 @@ Purpose: Recording and Analyzing Moving Objects
 """
 
 import argparse
+import os
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -19,9 +20,7 @@ def get_args():
         description='Recording and Analyzing Moving Objects',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('video',
-                        metavar='FILE',
-                        help='Input video file')
+    parser.add_argument('video', metavar='FILE', help='Input video file')
 
     args = parser.parse_args()
 
@@ -36,7 +35,8 @@ def main():
     """Make a jazz noise here"""
 
     args = get_args()
-    vid = cv2.VideoCapture(args.video)
+    print(args.video)
+    # vid = cv2.VideoCapture(args.video)
 
 
 # --------------------------------------------------
