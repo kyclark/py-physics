@@ -65,6 +65,29 @@ optional arguments:
   -h, --help  show this help message and exit
 ```
 
+The program will reject a "video" argument that is not a valid file, printing a brief "usage" statement:
+
+```
+$ ./videocapture.py blargh
+usage: videocapture.py [-h] FILE
+videocapture.py: error: Invalid file "blargh"
+```
+
+In the "main()" function, you can access the argument like so:
+
+```
+def main():
+    args = get_args()
+    print(args.video)
+```
+
+If you run the program with the provided "can.mp4" argument, you should see this output:
+
+```
+$ ./videocapture.py can.mp4
+can.mp4
+```
+
 ## Installing requirments
 
 Our program will need these imports:
