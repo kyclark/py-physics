@@ -156,6 +156,16 @@ def frame_masks(video, frame_num, thresh1, thresh2):
 
 
 # --------------------------------------------------
+def test_frame_masks():
+    """Test frame_masks"""
+
+    # assert frame_masks(???) == ???
+
+    # placeholder until real test
+    assert True
+
+
+# --------------------------------------------------
 def get_stats(mask):
     """Determine which region has the largest area"""
 
@@ -171,6 +181,16 @@ def get_stats(mask):
 
     # find the center of mass of the object
     return can_mask, regions[3][can_label, 0], regions[3][can_label, 1]
+
+
+# --------------------------------------------------
+def test_get_stats():
+    """Test get_stats"""
+
+    # assert get_stats(???) == ???
+
+    # placeholder until real test
+    assert True
 
 
 # --------------------------------------------------
