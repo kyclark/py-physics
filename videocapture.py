@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Author : Ken Youens-Clark <kyclark@gmail.com>
+Authors: Charles Wolgemuth <wolg@arizona.edu>,
+         Ken Youens-Clark <kyclark@gmail.com>
 Date   : 2020-08-05
 Purpose: Recording and Analyzing Moving Objects
 """
@@ -27,14 +28,14 @@ def get_args():
                         type=str)
 
     parser.add_argument('-t',
-                        '--thresh1',
+                        '--threshold1',
                         metavar='threshold1',
                         help='Threshold 1 value',
                         type=int,
                         default=0)
 
     parser.add_argument('-T',
-                        '--thresh2',
+                        '--threshold2',
                         metavar='threshold2',
                         help='Threshold 2 value',
                         type=int,
@@ -46,6 +47,20 @@ def get_args():
                         help='Distance in centimeters',
                         type=float,
                         default=5.)
+
+    parser.add_argument('-s',
+                        '--speed',
+                        metavar='speed',
+                        help='Speed of animation',
+                        type=float,
+                        default=.1)
+
+    parser.add_argument('-o',
+                        '--outfile',
+                        metavar='FILE',
+                        help='Name of output file',
+                        type=str,
+                        default='out.png')
 
     args = parser.parse_args()
 
@@ -60,30 +75,13 @@ def main():
     """Make a jazz noise here"""
 
     args = get_args()
-    x_cm, y_cm, time = track_motion(args.file, args.thresh1, args.thresh2,
-                                    args.dist)
-
-    print('Done')
-
-
-# --------------------------------------------------
-def read_frame(video, frame_num):
-    """Read a frame from the video"""
-
-    video.set(1, frame_num)
-    _, frame = video.read()
-    return frame
-
-
-# --------------------------------------------------
-def track_motion(filename, thresh, thresh2, dist):
-    """Track the motion"""
-
-    vid = cv2.VideoCapture(filename)
+    thresh1 = args.threshold1
+    thresh2 = args.threshold2
+    dist = args.dist
+    speed = args.speed
 
     # determine the size of the video images and the number of frames
-    # width = vid.get(3)
-    # height = vid.get(4)
+    vid = cv2.VideoCapture(args.file)
     fps = vid.get(5)
 
     # determines number of frames in video
@@ -93,37 +91,76 @@ def track_motion(filename, thresh, thresh2, dist):
     # of the center of mass at each time point
     x_cm = np.zeros((num_frames, 1))
     y_cm = np.zeros((num_frames, 1))
+    time = np.array(list(range(num_frames)), dtype='float') / fps
+    mask1, mask2 = frame_masks(vid, 0, thresh1, thresh2)
 
-    time = np.array([i for i in range(num_frames)], dtype='float') / fps
-
-    # read in first frame and convert to float
-    frame = read_frame(vid, 0)
-    frame = frame.astype('float')
-
-    # compute the grayscale and red images
-    gray = np.mean(frame, axis=2, dtype=float)
-    red = frame[:, :, 2]
-
-    # find values of the image created by subtracting gray from red
-    # that are less than Thresh or greater than Thresh2
-    mask = (red - gray < thresh)
-    mask2 = (red - gray > thresh2)
-
-    # have user measure the distance between lines in image
-    # fig = plt.figure()
     plt.spy(mask2)
 
+    # have user measure the distance between lines in image
     print(f'Click on two marker points in the image that are {dist} cm apart')
 
     points = np.array(plt.ginput(2))
 
     # define the pixel to cm conversion scale
     pix2cm = dist / (points[1, 0] - points[0, 0])
+    can_mask, x_cm[0], y_cm[0] = get_stats(mask1)
+
+    # plot the mask and its center of mass
+    plt.clf()
+    plt.spy(can_mask)
+    plt.plot(x_cm[0], y_cm[0], 'or')
+    plt.pause(speed)
+
+    # loop through the remaining frames of the video
+    for i in range(1, num_frames):
+        # read in first frame and convert to float
+        mask1, mask2 = frame_masks(vid, i, thresh1, thresh2)
+        can_mask, x_cm[i], y_cm[i] = get_stats(mask1)
+
+        # plot the mask and its center of mass
+        plt.clf()
+        plt.spy(can_mask)
+        plt.plot(x_cm[i], y_cm[i], 'or')
+        plt.pause(speed)
+
+    # convert Xcm and Ycm to centimeters
+    x_cm, y_cm = pix2cm * x_cm, pix2cm * y_cm
+
+    # plot Xcm as a function of time
+    plt.figure()
+    plt.plot(time, x_cm)
+    plt.xlabel('Time (s)', fontname='Arial', fontsize=16)
+    plt.ylabel('Distance (cm)', fontname='Arial', fontsize=16)
+    plt.savefig(args.outfile, fmt='png')
+    plt.show()
+    vid.release()
+
+    print(f'Done, see "{args.outfile}".')
+
+
+# --------------------------------------------------
+def frame_masks(video, frame_num, thresh1, thresh2):
+    """Show a frame"""
+
+    video.set(1, frame_num)
+    _, frame_raw = video.read()
+    frame = frame_raw.astype('float')
+
+    # compute the grayscale and red images
+    gray = np.mean(frame, axis=2, dtype=float)
+    red = frame[:, :, 2]
+
+    # find values of the image created by subtracting gray from red
+    # that are less than Thresh1 or greater than Thresh2
+    return (red - gray < thresh1), (red - gray > thresh2)
+
+
+# --------------------------------------------------
+def get_stats(mask):
+    """Determine which region has the largest area"""
 
     # find the connected regions in the Mask
     regions = cv2.connectedComponentsWithStats(mask.astype('uint8'))
-
-    # determine which region has the largest area
     stats = regions[2]
     stats[0, 4] = 0
     can_label = np.argmax(stats[:, 4])
@@ -133,62 +170,7 @@ def track_motion(filename, thresh, thresh2, dist):
     can_mask[regions[1] != can_label] = 0
 
     # find the center of mass of the object
-    x_cm[0] = regions[3][can_label, 0]
-    y_cm[0] = regions[3][can_label, 1]
-
-    # plot the mask and its center of mass
-    plt.clf()
-    plt.spy(can_mask)
-    plt.plot(x_cm[0], y_cm[0], 'or')
-    plt.pause(0.1)
-
-    # loop through the remaining frames of the video
-    for i in range(1, num_frames):
-        # read in first frame and convert to float
-        frame = read_frame(vid, i)
-        frame = frame.astype('float')
-
-        # compute the grayscale image
-        gray = np.mean(frame, axis=2, dtype=float)
-        red = frame[:, :, 2]
-
-        # find values of the grayscale image greater than Thresh
-        mask = (red - gray < thresh)
-
-        # find the connected regions in the Mask
-        regions = cv2.connectedComponentsWithStats(mask.astype('uint8'))
-
-        # determine which region has the largest area
-        stats = regions[2]
-        stats[0, 4] = 0
-        can_label = np.argmax(stats[:, 4])
-
-        # remove unwanted regions from the Mask
-        can_mask = mask
-        can_mask[regions[1] != can_label] = 0
-
-        # find the Center of Mass of the object
-        x_cm[i] = regions[3][can_label, 0]
-        y_cm[i] = regions[3][can_label, 1]
-
-        # plot the mask and its center of mass
-        plt.clf()
-        plt.spy(can_mask)
-        plt.plot(x_cm[i], y_cm[i], 'or')
-        plt.pause(0.1)
-
-    # convert Xcm and Ycm to centimeters
-    x_cm = pix2cm * x_cm
-    y_cm = pix2cm * y_cm
-
-    # plot Xcm as a function of time
-    plt.figure()
-    plt.plot(time, x_cm)
-    plt.xlabel('Time (s)', fontname='Arial', fontsize=16)
-    plt.ylabel('Distance (cm)', fontname='Arial', fontsize=16)
-    vid.release()
-
-    return x_cm, y_cm, time
+    return can_mask, regions[3][can_label, 0], regions[3][can_label, 1]
 
 
 # --------------------------------------------------
