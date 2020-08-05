@@ -43,9 +43,9 @@ def get_args():
     parser.add_argument('-d',
                         '--dist',
                         metavar='distance',
-                        help='Distance',
-                        type=int,
-                        default=5)
+                        help='Distance in centimeters',
+                        type=float,
+                        default=5.)
 
     args = parser.parse_args()
 
@@ -63,7 +63,7 @@ def main():
     x_cm, y_cm, time = track_motion(args.file, args.thresh1, args.thresh2,
                                     args.dist)
 
-    print(f'X = "{x_cm}", Y = "{y_cm}", time = "{time}"')
+    print('Done')
 
 
 # --------------------------------------------------
@@ -113,7 +113,7 @@ def track_motion(filename, thresh, thresh2, dist):
     # fig = plt.figure()
     plt.spy(mask2)
 
-    print('Click on two marker points in the image that are Dist apart')
+    print(f'Click on two marker points in the image that are {dist} cm apart')
 
     points = np.array(plt.ginput(2))
 
@@ -153,7 +153,7 @@ def track_motion(filename, thresh, thresh2, dist):
         red = frame[:, :, 2]
 
         # find values of the grayscale image greater than Thresh
-        mask = (red - gray > thresh)
+        mask = (red - gray < thresh)
 
         # find the connected regions in the Mask
         regions = cv2.connectedComponentsWithStats(mask.astype('uint8'))
@@ -177,16 +177,16 @@ def track_motion(filename, thresh, thresh2, dist):
         plt.plot(x_cm[i], y_cm[i], 'or')
         plt.pause(0.1)
 
-        # convert Xcm and Ycm to centimeters
-        x_cm = pix2cm * x_cm
-        y_cm = pix2cm * y_cm
+    # convert Xcm and Ycm to centimeters
+    x_cm = pix2cm * x_cm
+    y_cm = pix2cm * y_cm
 
-        # plot Xcm as a function of time
-        plt.figure()
-        plt.plot(time, x_cm)
-        plt.xlabel('Time (s)', fontname='Arial', fontsize=16)
-        plt.ylabel('Distance (cm)', fontname='Arial', fontsize=16)
-        vid.release()
+    # plot Xcm as a function of time
+    plt.figure()
+    plt.plot(time, x_cm)
+    plt.xlabel('Time (s)', fontname='Arial', fontsize=16)
+    plt.ylabel('Distance (cm)', fontname='Arial', fontsize=16)
+    vid.release()
 
     return x_cm, y_cm, time
 
